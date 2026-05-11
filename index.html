@@ -2599,38 +2599,8 @@
       confetti.appendChild(piece);
     }
 
-    const counters = document.querySelectorAll("[data-count]");
-    const animateCounter = (element) => {
-      const target = Number(element.dataset.count);
-      const duration = 1600;
-      const startTime = performance.now();
-
-      const update = (now) => {
-        const progress = Math.min((now - startTime) / duration, 1);
-        const eased = 1 - Math.pow(1 - progress, 4);
-        const value = Math.floor(eased * target);
-        element.textContent = value.toLocaleString() + " steps";
-
-        if(progress < 1){
-          requestAnimationFrame(update);
-        }else{
-          element.textContent = target.toLocaleString() + " steps";
-        }
-      };
-
-      requestAnimationFrame(update);
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if(entry.isIntersecting && !entry.target.dataset.animated){
-          entry.target.dataset.animated = "true";
-          animateCounter(entry.target);
-        }
-      });
-    }, {threshold:.35});
-
-    counters.forEach(counter => observer.observe(counter));
+    // Walkathon counters are now controlled by Firebase.
+    // Do not animate from fixed data-count values, because that can overwrite live Firebase updates.
   </script>
 
 
@@ -2755,47 +2725,26 @@ function updateIdentity(row, data, type){
   if(!row) return;
   const cells = row.querySelectorAll("td");
 
+  // Common table layout:
   // set-score tables: 0 stage, 1 match, 2 teamA, 3 playersA, 4 teamB, 5 playersB
-  // simple tables: 0 stage, 1 match, 2 teamA, 3 teamB
+  // volleyball/futsal/chairball simple tables: 0 stage, 1 match, 2 teamA, 3 teamB
   setText(cells[0], data.stage);
 
-  const teamA = clean(data.teamA || data.TeamA || data["Team A"]);
-  const teamB = clean(data.teamB || data.TeamB || data["Team B"]);
-
   const teamAChip = cells[2]?.querySelector(".team-chip, .winner-chip");
-  const teamBCellIndex = type === "set" ? 4 : 3;
-  const teamBChip = cells[teamBCellIndex]?.querySelector(".team-chip, .winner-chip");
+  const teamBChip = type === "set" ? cells[4]?.querySelector(".team-chip, .winner-chip") : cells[3]?.querySelector(".team-chip, .winner-chip");
 
-  setChip(teamAChip, teamA);
-  setChip(teamBChip, teamB);
+  setChip(teamAChip, data.teamA);
+  setChip(teamBChip, data.teamB);
 
   if(type === "set"){
-    setPlayers(cells[3], data.playersA || data["Players A"]);
-    setPlayers(cells[5], data.playersB || data["Players B"]);
+    setPlayers(cells[3], data.playersA);
+    setPlayers(cells[5], data.playersB);
   }
 }
 
 function updateSetScoreRow(row, data){
   if(!row) return;
   updateIdentity(row, data, "set");
-
-  const points = row.querySelectorAll(".pt");
-  [data.s1A, data.s1B, data.s2A, data.s2B, data.s3A, data.s3B].forEach((value, index) => setText(points[index], value));
-
-  const sets = row.querySelectorAll(".sets-won");
-  setText(sets[0], data.setsWonA);
-  setText(sets[1], data.setsWonB);
-
-  setWinner(row.querySelector(".winner-chip"), data.matchWinner);
-}
-
-
-function updateVolleyballRow(row, data){
-  if(!row) return;
-
-  // Volleyball layout:
-  // 0 stage, 1 match, 2 teamA, 3 teamB, then S1/S2/S3 and sets
-  updateIdentity(row, data, "simple");
 
   const points = row.querySelectorAll(".pt");
   [data.s1A, data.s1B, data.s2A, data.s2B, data.s3A, data.s3B].forEach((value, index) => setText(points[index], value));
@@ -2844,7 +2793,7 @@ function applyScores(rows){
 
     if(sport === "badminton") updateSetScoreRow(findRowInPanel(panelMap.badminton[category], match), data);
     if(sport === "tabletennis") updateSetScoreRow(findRowInPanel(panelMap.tabletennis[category], match), data);
-    if(sport === "volleyball") updateVolleyballRow(findRowInTable(".vb-score-table", match), data);
+    if(sport === "volleyball") updateSetScoreRow(findRowInTable(".vb-score-table", match), data);
     if(sport === "futsal") updateFutsalRow(findRowInTable(".fs-score-table", match), data);
     if(sport === "chairball") updateSimpleScoreRow(findRowInTable(".cb-score-table", match), data, ".cb-score");
   });
