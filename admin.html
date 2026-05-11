@@ -1,29 +1,537 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PPC Admin Live Scores</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;900&family=Oswald:wght@700&display=swap" rel="stylesheet">
-<style>*{box-sizing:border-box}body{margin:0;background:#07111f;color:white;font-family:Inter,Arial;padding:16px}h1{font-family:Oswald,sans-serif;text-transform:uppercase}.top{position:sticky;top:0;background:rgba(7,17,31,.95);z-index:10;padding:12px;border:1px solid #334155;border-radius:16px;margin-bottom:12px}button{padding:10px 14px;border:0;border-radius:10px;font-weight:900;margin:4px;cursor:pointer}.primary{background:#006dff;color:white}.danger{background:#d71919;color:white}.status{color:#ffd21e;font-weight:900}.wrap{overflow:auto;border:1px solid #334155;border-radius:14px}table{border-collapse:collapse;min-width:1350px;width:100%}th,td{border:1px solid #334155;padding:7px}th{background:#020617;position:sticky;top:0}input,select{width:100%;padding:7px;border-radius:7px;border:0;font-weight:700}.small{width:60px;text-align:center}.walk{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0}.card{background:#0f172a;padding:12px;border-radius:14px;border:1px solid #334155}@media(max-width:700px){.walk{grid-template-columns:1fr}}</style></head>
-<body><div class="top"><h1>PPC Admin Live Scores</h1><p>Keep this page for staff only. Edit scores, then click save. The public page updates instantly.</p><button class="primary" id="save">Save to Firebase</button><button id="load">Load</button><button class="danger" id="reset">Reset Demo Data</button> <span class="status" id="status">Connecting...</span></div>
-<div class="walk"><div class="card">Proton steps<input id="wProton" type="number"></div><div class="card">Neutron steps<input id="wNeutron" type="number"></div><div class="card">Electron steps<input id="wElectron" type="number"></div></div>
-<div class="wrap"><table><thead><tr><th>Sport</th><th>Category</th><th>Match</th><th>Stage</th><th>Team A</th><th>Players A</th><th>Team B</th><th>Players B</th><th>S1A</th><th>S1B</th><th>S2A</th><th>S2B</th><th>S3A</th><th>S3B</th><th>Sets A</th><th>Sets B</th><th>Score A</th><th>Score B</th><th>Winner</th><th>Pen A</th><th>Pen B</th><th>Pen Winner</th></tr></thead><tbody id="tbody"></tbody></table></div>
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
-const firebaseConfig={"apiKey": "AIzaSyDTHHWElxSSPhA9fX7PssRblcQ_1rapTp0", "authDomain": "ppc-sports-day-2026.firebaseapp.com", "databaseURL": "https://ppc-sports-day-2026-default-rtdb.asia-southeast1.firebasedatabase.app", "projectId": "ppc-sports-day-2026", "storageBucket": "ppc-sports-day-2026.firebasestorage.app", "messagingSenderId": "146880736946", "appId": "1:146880736946:web:9e4f749b97bc613a7863ab", "measurementId": "G-8MDMNZW6YJ"};
-const DEFAULT_SCORES=[{"sport": "badminton", "category": "double_male", "match": "M1", "stage": "Qualifying", "teamA": "Proton", "teamB": "Neutron", "s1A": "21", "s1B": "18", "s2A": "21", "s2B": "16", "s3A": "-", "s3B": "-", "setsWonA": "2", "setsWonB": "0", "matchWinner": "Proton"}, {"sport": "badminton", "category": "double_male", "match": "M2", "stage": "Qualifying", "teamA": "Electron", "teamB": "Proton", "s1A": "17", "s1B": "21", "s2A": "19", "s2B": "21", "s3A": "-", "s3B": "-", "setsWonA": "0", "setsWonB": "2", "matchWinner": "Proton"}, {"sport": "badminton", "category": "double_male", "match": "M3", "stage": "Qualifying", "teamA": "Neutron", "teamB": "Electron", "s1A": "21", "s1B": "15", "s2A": "21", "s2B": "13", "s3A": "-", "s3B": "-", "setsWonA": "2", "setsWonB": "0", "matchWinner": "Neutron"}, {"sport": "badminton", "category": "double_male", "match": "M4", "stage": "Final", "teamA": "Pending", "teamB": "Pending", "s1A": "-", "s1B": "-", "s2A": "-", "s2B": "-", "s3A": "-", "s3B": "-", "setsWonA": "-", "setsWonB": "-", "matchWinner": "TBD"}, {"sport": "badminton", "category": "double_female", "match": "M1", "stage": "Qualifying", "teamA": "Proton", "teamB": "Neutron", "s1A": "21", "s1B": "17", "s2A": "21", "s2B": "14", "s3A": "-", "s3B": "-", "setsWonA": "2", "setsWonB": "0", "matchWinner": "Proton"}, {"sport": "badminton", "category": "double_female", "match": "M2", "stage": "Qualifying", "teamA": "Electron", "teamB": "Proton", "s1A": "18", "s1B": "21", "s2A": "21", "s2B": "19", "s3A": "21", "s3B": "16", "setsWonA": "2", "setsWonB": "1", "matchWinner": "Proton"}, {"sport": "badminton", "category": "double_female", "match": "M3", "stage": "Qualifying", "teamA": "Neutron", "teamB": "Electron", "s1A": "16", "s1B": "21", "s2A": "15", "s2B": "21", "s3A": "-", "s3B": "-", "setsWonA": "0", "setsWonB": "2", "matchWinner": "Electron"}, {"sport": "badminton", "category": "double_female", "match": "M4", "stage": "Final", "teamA": "Pending", "teamB": "Pending", "s1A": "-", "s1B": "-", "s2A": "-", "s2B": "-", "s3A": "-", "s3B": "-", "setsWonA": "-", "setsWonB": "-", "matchWinner": "TBD"}, {"sport": "badminton", "category": "double_mix", "match": "M1", "stage": "Qualifying", "teamA": "Proton", "teamB": "Neutron", "s1A": "21", "s1B": "16", "s2A": "21", "s2B": "18", "s3A": "-", "s3B": "-", "setsWonA": "2", "setsWonB": "0", "matchWinner": "Proton"}, {"sport": "badminton", "category": "double_mix", "match": "M2", "stage": "Qualifying", "teamA": "Electron", "teamB": "Proton", "s1A": "19", "s1B": "21", "s2A": "16", "s2B": "21", "s3A": "-", "s3B": "-", "setsWonA": "0", "setsWonB": "2", "matchWinner": "Proton"}, {"sport": "badminton", "category": "double_mix", "match": "M3", "stage": "Qualifying", "teamA": "Neutron", "teamB": "Electron", "s1A": "21", "s1B": "13", "s2A": "21", "s2B": "11", "s3A": "-", "s3B": "-", "setsWonA": "2", "setsWonB": "0", "matchWinner": "Neutron"}, {"sport": "badminton", "category": "double_mix", "match": "M4", "stage": "Final", "teamA": "Pending", "teamB": "Pending", "s1A": "-", "s1B": "-", "s2A": "-", "s2B": "-", "s3A": "-", "s3B": "-", "setsWonA": "-", "setsWonB": "-", "matchWinner": "TBD"}, {"sport": "tabletennis", "category": "mix_double", "match": "M1", "stage": "Qualifying", "teamA": "Proton", "teamB": "Neutron", "s1A": "-", "s1B": "-", "s2A": "-", "s2B": "-", "s3A": "-", "s3B": "-", "setsWonA": "-", "setsWonB": "-", "matchWinner": "TBD"}, {"sport": "tabletennis", "category": "mix_double", "match": "M2", "stage": "Qualifying", "teamA": "Electron", "teamB": "Proton", "s1A": "-", "s1B": "-", "s2A": "-", "s2B": "-", "s3A": "-", "s3B": "-", "setsWonA": "-", "setsWonB": "-", "matchWinner": "TBD"}, {"sport": "tabletennis", "category": "mix_double", "match": "M3", "stage": "Qualifying", "teamA": "Neutron", "teamB": "Electron", "s1A": "-", "s1B": "-", "s2A": "-", "s2B": "-", "s3A": "-", "s3B": "-", "setsWonA": "-", "setsWonB": "-", "matchWinner": "TBD"}, {"sport": "tabletennis", "category": "mix_double", "match": "M4", "stage": "Final", "teamA": "Pending", "teamB": "Pending", "s1A": "-", "s1B": "-", "s2A": "-", "s2B": "-", "s3A": "-", "s3B": "-", "setsWonA": "-", "setsWonB": "-", "matchWinner": "TBD"}, {"sport": "tabletennis", "category": "single_female", "match": "M1", "stage": "Qualifying", "teamA": "Proton", "teamB": "Neutron", "s1A": "-", "s1B": "-", "s2A": "-", "s2B": "-", "s3A": "-", "s3B": "-", "setsWonA": "-", "setsWonB": "-", "matchWinner": "TBD"}, {"sport": "tabletennis", "category": "single_female", "match": "M2", "stage": "Qualifying", "teamA": "Electron", "teamB": "Proton", "s1A": "-", "s1B": "-", "s2A": "-", "s2B": "-", "s3A": "-", "s3B": "-", "setsWonA": "-", "setsWonB": "-", "matchWinner": "TBD"}, {"sport": "tabletennis", "category": "single_female", "match": "M3", "stage": "Qualifying", "teamA": "Neutron", "teamB": "Electron", "s1A": "-", "s1B": "-", "s2A": "-", "s2B": "-", "s3A": "-", "s3B": "-", "setsWonA": "-", "setsWonB": "-", "matchWinner": "TBD"}, {"sport": "tabletennis", "category": "single_female", "match": "M4", "stage": "Final", "teamA": "Pending", "teamB": "Pending", "s1A": "-", "s1B": "-", "s2A": "-", "s2B": "-", "s3A": "-", "s3B": "-", "setsWonA": "-", "setsWonB": "-", "matchWinner": "TBD"}, {"sport": "tabletennis", "category": "single_male", "match": "M1", "stage": "Qualifying", "teamA": "Proton", "teamB": "Neutron", "s1A": "-", "s1B": "-", "s2A": "-", "s2B": "-", "s3A": "-", "s3B": "-", "setsWonA": "-", "setsWonB": "-", "matchWinner": "TBD"}, {"sport": "tabletennis", "category": "single_male", "match": "M2", "stage": "Qualifying", "teamA": "Electron", "teamB": "Proton", "s1A": "-", "s1B": "-", "s2A": "-", "s2B": "-", "s3A": "-", "s3B": "-", "setsWonA": "-", "setsWonB": "-", "matchWinner": "TBD"}, {"sport": "tabletennis", "category": "single_male", "match": "M3", "stage": "Qualifying", "teamA": "Neutron", "teamB": "Electron", "s1A": "-", "s1B": "-", "s2A": "-", "s2B": "-", "s3A": "-", "s3B": "-", "setsWonA": "-", "setsWonB": "-", "matchWinner": "TBD"}, {"sport": "tabletennis", "category": "single_male", "match": "M4", "stage": "Final", "teamA": "Pending", "teamB": "Pending", "s1A": "-", "s1B": "-", "s2A": "-", "s2B": "-", "s3A": "-", "s3B": "-", "setsWonA": "-", "setsWonB": "-", "matchWinner": "TBD"}, {"sport": "volleyball", "category": "main", "match": "M1", "stage": "Qualifying", "teamA": "Proton", "teamB": "Neutron", "s1A": "25", "s1B": "21", "s2A": "23", "s2B": "25", "s3A": "15", "s3B": "11", "setsWonA": "2", "setsWonB": "1", "matchWinner": "Proton"}, {"sport": "volleyball", "category": "main", "match": "M2", "stage": "Qualifying", "teamA": "Electron", "teamB": "Proton", "s1A": "20", "s1B": "25", "s2A": "22", "s2B": "25", "s3A": "-", "s3B": "-", "setsWonA": "0", "setsWonB": "2", "matchWinner": "Proton"}, {"sport": "volleyball", "category": "main", "match": "M3", "stage": "Qualifying", "teamA": "Neutron", "teamB": "Electron", "s1A": "25", "s1B": "18", "s2A": "25", "s2B": "20", "s3A": "-", "s3B": "-", "setsWonA": "2", "setsWonB": "0", "matchWinner": "Neutron"}, {"sport": "volleyball", "category": "main", "match": "M4", "stage": "Final", "teamA": "Pending", "teamB": "Pending", "s1A": "-", "s1B": "-", "s2A": "-", "s2B": "-", "s3A": "-", "s3B": "-", "setsWonA": "-", "setsWonB": "-", "matchWinner": "TBD"}, {"sport": "futsal", "category": "main", "match": "M1", "stage": "Qualifying", "teamA": "Neutron", "teamB": "Electron", "scoreA": "3", "scoreB": "2", "matchWinner": "Neutron", "penaltyA": "-", "penaltyB": "-", "penaltyWinner": "-"}, {"sport": "futsal", "category": "main", "match": "M2", "stage": "Qualifying", "teamA": "Proton", "teamB": "Electron", "scoreA": "1", "scoreB": "1", "matchWinner": "Draw", "penaltyA": "4", "penaltyB": "3", "penaltyWinner": "Proton"}, {"sport": "futsal", "category": "main", "match": "M3", "stage": "Qualifying", "teamA": "Neutron", "teamB": "Proton", "scoreA": "2", "scoreB": "2", "matchWinner": "Draw", "penaltyA": "5", "penaltyB": "4", "penaltyWinner": "Neutron"}, {"sport": "futsal", "category": "main", "match": "M4", "stage": "Final", "teamA": "Pending", "teamB": "Pending", "scoreA": "-", "scoreB": "-", "matchWinner": "TBD", "penaltyA": "-", "penaltyB": "-", "penaltyWinner": "TBD"}, {"sport": "chairball", "category": "main", "match": "M1", "stage": "Qualifying", "teamA": "Neutron", "teamB": "Electron", "scoreA": "4", "scoreB": "3", "matchWinner": "Neutron", "penaltyA": "-", "penaltyB": "-", "penaltyWinner": "-"}, {"sport": "chairball", "category": "main", "match": "M2", "stage": "Qualifying", "teamA": "Proton", "teamB": "Electron", "scoreA": "2", "scoreB": "5", "matchWinner": "Electron", "penaltyA": "-", "penaltyB": "-", "penaltyWinner": "-"}, {"sport": "chairball", "category": "main", "match": "M3", "stage": "Qualifying", "teamA": "Neutron", "teamB": "Proton", "scoreA": "3", "scoreB": "1", "matchWinner": "Neutron", "penaltyA": "-", "penaltyB": "-", "penaltyWinner": "-"}, {"sport": "chairball", "category": "main", "match": "M4", "stage": "Final", "teamA": "Pending", "teamB": "Pending", "scoreA": "-", "scoreB": "-", "matchWinner": "TBD", "penaltyA": "-", "penaltyB": "-", "penaltyWinner": "-"}];
-const DEFAULT_WALK={"Proton": 128450, "Neutron": 104280, "Electron": 67920};
-const app=initializeApp(firebaseConfig), db=getDatabase(app);
-const teams=["Proton","Neutron","Electron","Pending","TBD","Draw","-"], sports=["badminton","tabletennis","volleyball","futsal","chairball"], cats=["double_male","double_female","double_mix","mix_double","single_female","single_male","main"], stages=["Qualifying","Final"];
-const tb=document.getElementById("tbody"), st=document.getElementById("status");
-function sel(v,arr,c){return `<select class="${c}">${arr.map(x=>`<option value="${x}" ${String(v)==x?"selected":""}>${x}</option>`).join("")}</select>`}
-function inp(v,c){return `<input class="${c}" value="${v??""}">`}
-function render(rows){tb.innerHTML=""; rows.forEach(r=>{let tr=document.createElement("tr"); tr.innerHTML=`<td>${sel(r.sport,sports,"sport")}</td><td>${sel(r.category||"main",cats,"category")}</td><td>${inp(r.match,"match small")}</td><td>${sel(r.stage||"Qualifying",stages,"stage")}</td><td>${sel(r.teamA||"",teams,"teamA")}</td><td>${inp(r.playersA||"","playersA")}</td><td>${sel(r.teamB||"",teams,"teamB")}</td><td>${inp(r.playersB||"","playersB")}</td><td>${inp(r.s1A||"-","s1A small")}</td><td>${inp(r.s1B||"-","s1B small")}</td><td>${inp(r.s2A||"-","s2A small")}</td><td>${inp(r.s2B||"-","s2B small")}</td><td>${inp(r.s3A||"-","s3A small")}</td><td>${inp(r.s3B||"-","s3B small")}</td><td>${inp(r.setsWonA||"-","setsWonA small")}</td><td>${inp(r.setsWonB||"-","setsWonB small")}</td><td>${inp(r.scoreA||"-","scoreA small")}</td><td>${inp(r.scoreB||"-","scoreB small")}</td><td>${sel(r.matchWinner||"TBD",teams,"matchWinner")}</td><td>${inp(r.penaltyA||"-","penaltyA small")}</td><td>${inp(r.penaltyB||"-","penaltyB small")}</td><td>${sel(r.penaltyWinner||"-",teams,"penaltyWinner")}</td>`; tb.appendChild(tr);})}
-function collect(){return [...tb.querySelectorAll("tr")].map(tr=>{let q=c=>tr.querySelector("."+c)?.value||""; return {sport:q("sport"),category:q("category"),match:q("match"),stage:q("stage"),teamA:q("teamA"),playersA:q("playersA"),teamB:q("teamB"),playersB:q("playersB"),s1A:q("s1A"),s1B:q("s1B"),s2A:q("s2A"),s2B:q("s2B"),s3A:q("s3A"),s3B:q("s3B"),setsWonA:q("setsWonA"),setsWonB:q("setsWonB"),scoreA:q("scoreA"),scoreB:q("scoreB"),matchWinner:q("matchWinner"),penaltyA:q("penaltyA"),penaltyB:q("penaltyB"),penaltyWinner:q("penaltyWinner")}})}
-function walk(){return {Proton:Number(wProton.value||0),Neutron:Number(wNeutron.value||0),Electron:Number(wElectron.value||0)}}
-function setWalk(w){wProton.value=w?.Proton??0; wNeutron.value=w?.Neutron??0; wElectron.value=w?.Electron??0}
-async function load(){let s=await get(ref(db,"scores")), w=await get(ref(db,"walkathon")); render(s.exists()?Object.values(s.val()):DEFAULT_SCORES); setWalk(w.exists()?w.val():DEFAULT_WALK); st.textContent="Loaded";}
-async function save(){try{st.textContent="Saving..."; await set(ref(db,"scores"),collect()); await set(ref(db,"walkathon"),walk()); st.textContent="Saved "+new Date().toLocaleTimeString();}catch(e){console.error(e); st.textContent="Save error: "+e.message; alert("Save error: "+e.message);}}
-async function reset(){try{if(!confirm("Reset demo data?"))return; st.textContent="Resetting..."; await set(ref(db,"scores"),DEFAULT_SCORES); await set(ref(db,"walkathon"),DEFAULT_WALK); await load(); st.textContent="Demo data restored";}catch(e){console.error(e); st.textContent="Reset error: "+e.message; alert("Reset error: "+e.message);}}
-document.getElementById("save").addEventListener("click", save);
-document.getElementById("load").addEventListener("click", load);
-document.getElementById("reset").addEventListener("click", reset);
-load().catch(e=>{console.error(e);st.textContent="Error: "+e.message;render(DEFAULT_SCORES);setWalk(DEFAULT_WALK);});
-</script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PPC Admin Live Scores</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;900&family=Oswald:wght@700&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: #07111f;
+      color: white;
+      font-family: Inter, Arial, sans-serif;
+      padding: 16px;
+    }
+
+    h1 {
+      font-family: Oswald, sans-serif;
+      text-transform: uppercase;
+      font-size: 38px;
+      margin: 0 0 14px;
+      letter-spacing: 1px;
+    }
+
+    .top {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(7, 17, 31, 0.97);
+      border: 1px solid #334155;
+      border-radius: 18px;
+      padding: 18px;
+      margin-bottom: 14px;
+      box-shadow: 0 12px 28px rgba(0,0,0,.28);
+    }
+
+    .top p {
+      margin: 0 0 14px;
+      font-size: 17px;
+      line-height: 1.5;
+    }
+
+    button {
+      padding: 12px 18px;
+      border: 0;
+      border-radius: 11px;
+      font-weight: 900;
+      margin: 4px;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    .primary {
+      background: #006dff;
+      color: white;
+    }
+
+    .danger {
+      background: #d71919;
+      color: white;
+    }
+
+    .status {
+      color: #ffd21e;
+      font-weight: 900;
+      font-size: 16px;
+      margin-left: 6px;
+    }
+
+    .walk {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 12px 0 14px;
+    }
+
+    .card {
+      background: #0f172a;
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid #334155;
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .card input {
+      margin-top: 8px;
+    }
+
+    .wrap {
+      overflow: auto;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      max-height: 72vh;
+      background: #020617;
+    }
+
+    table {
+      border-collapse: collapse;
+      min-width: 2400px;
+      width: 100%;
+      font-size: 16px;
+    }
+
+    th,
+    td {
+      border: 1px solid #334155;
+      padding: 10px;
+      vertical-align: middle;
+      min-width: 100px;
+    }
+
+    th {
+      background: #020617;
+      color: white;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      font-size: 16px;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    td {
+      background: #07111f;
+    }
+
+    input,
+    select {
+      width: 100%;
+      min-width: 95px;
+      height: 44px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 0;
+      font-weight: 800;
+      font-size: 15px;
+      background: #ffffff;
+      color: #000000;
+    }
+
+    .small {
+      min-width: 80px;
+      text-align: center;
+    }
+
+    /* Wider readable columns */
+    th:nth-child(1), td:nth-child(1) {
+      min-width: 130px;
+    }
+
+    th:nth-child(2), td:nth-child(2) {
+      min-width: 170px;
+    }
+
+    th:nth-child(3), td:nth-child(3) {
+      min-width: 90px;
+    }
+
+    th:nth-child(4), td:nth-child(4) {
+      min-width: 140px;
+    }
+
+    th:nth-child(5), td:nth-child(5),
+    th:nth-child(7), td:nth-child(7) {
+      min-width: 150px;
+    }
+
+    th:nth-child(6), td:nth-child(6),
+    th:nth-child(8), td:nth-child(8) {
+      min-width: 310px;
+    }
+
+    th:nth-child(19), td:nth-child(19),
+    th:nth-child(22), td:nth-child(22) {
+      min-width: 160px;
+    }
+
+    .playersA,
+    .playersB {
+      min-width: 290px;
+    }
+
+    @media (max-width: 700px) {
+      body {
+        padding: 10px;
+      }
+
+      h1 {
+        font-size: 30px;
+      }
+
+      .walk {
+        grid-template-columns: 1fr;
+      }
+
+      table {
+        min-width: 2400px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="top">
+    <h1>PPC Admin Live Scores</h1>
+    <p>Keep this page for staff only. Edit teams, players, scores, and winners, then click save. The public page updates from Firebase.</p>
+
+    <button class="primary" id="save">Save to Firebase</button>
+    <button id="load">Load</button>
+    <button class="danger" id="reset">Reset Demo Data</button>
+
+    <span class="status" id="status">Connecting...</span>
+  </div>
+
+  <div class="walk">
+    <div class="card">
+      Proton steps
+      <input id="wProton" type="number" />
+    </div>
+
+    <div class="card">
+      Neutron steps
+      <input id="wNeutron" type="number" />
+    </div>
+
+    <div class="card">
+      Electron steps
+      <input id="wElectron" type="number" />
+    </div>
+  </div>
+
+  <div class="wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Sport</th>
+          <th>Category</th>
+          <th>Match</th>
+          <th>Stage</th>
+          <th>Team A</th>
+          <th>Players A</th>
+          <th>Team B</th>
+          <th>Players B</th>
+          <th>S1A</th>
+          <th>S1B</th>
+          <th>S2A</th>
+          <th>S2B</th>
+          <th>S3A</th>
+          <th>S3B</th>
+          <th>Sets A</th>
+          <th>Sets B</th>
+          <th>Score A</th>
+          <th>Score B</th>
+          <th>Winner</th>
+          <th>Pen A</th>
+          <th>Pen B</th>
+          <th>Pen Winner</th>
+        </tr>
+      </thead>
+
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDTHHWElxSSPhA9fX7PssRblcQ_1rapTp0",
+      authDomain: "ppc-sports-day-2026.firebaseapp.com",
+      databaseURL: "https://ppc-sports-day-2026-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "ppc-sports-day-2026",
+      storageBucket: "ppc-sports-day-2026.firebasestorage.app",
+      messagingSenderId: "146880736946",
+      appId: "1:146880736946:web:9e4f749b97bc613a7863ab",
+      measurementId: "G-8MDMNZW6YJ"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const teams = ["Proton", "Neutron", "Electron", "Pending", "TBD", "Draw", "-"];
+
+    const sports = [
+      "badminton",
+      "tabletennis",
+      "volleyball",
+      "futsal",
+      "chairball"
+    ];
+
+    const categories = [
+      "double_male",
+      "double_female",
+      "double_mix",
+      "mix_double",
+      "single_female",
+      "single_male",
+      "main"
+    ];
+
+    const stages = ["Qualifying", "Final"];
+
+    const tbody = document.getElementById("tbody");
+    const statusText = document.getElementById("status");
+
+    const defaultWalkathon = {
+      Proton: 128450,
+      Neutron: 104280,
+      Electron: 67920
+    };
+
+    function setStatus(message) {
+      statusText.textContent = message;
+    }
+
+    function optionList(value, options, className) {
+      return `
+        <select class="${className}">
+          ${options.map(option => `
+            <option value="${option}" ${String(value) === option ? "selected" : ""}>
+              ${option}
+            </option>
+          `).join("")}
+        </select>
+      `;
+    }
+
+    function inputBox(value, className) {
+      return `<input class="${className}" value="${value ?? ""}">`;
+    }
+
+    async function loadDefaultData() {
+      try {
+        const response = await fetch("./initial-data.json", { cache: "no-store" });
+
+        if (!response.ok) {
+          throw new Error("initial-data.json not found");
+        }
+
+        const data = await response.json();
+
+        return {
+          scores: Array.isArray(data.scores) ? data.scores : [],
+          walkathon: data.walkathon || defaultWalkathon
+        };
+      } catch (error) {
+        console.error(error);
+        alert("Could not load initial-data.json. Please check that it exists in the GitHub root folder.");
+
+        return {
+          scores: [],
+          walkathon: defaultWalkathon
+        };
+      }
+    }
+
+    function renderScores(rows) {
+      tbody.innerHTML = "";
+
+      rows.forEach(row => {
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+          <td>${optionList(row.sport || "", sports, "sport")}</td>
+          <td>${optionList(row.category || "main", categories, "category")}</td>
+          <td>${inputBox(row.match || "", "match small")}</td>
+          <td>${optionList(row.stage || "Qualifying", stages, "stage")}</td>
+
+          <td>${optionList(row.teamA || "-", teams, "teamA")}</td>
+          <td>${inputBox(row.playersA || "", "playersA")}</td>
+
+          <td>${optionList(row.teamB || "-", teams, "teamB")}</td>
+          <td>${inputBox(row.playersB || "", "playersB")}</td>
+
+          <td>${inputBox(row.s1A || "-", "s1A small")}</td>
+          <td>${inputBox(row.s1B || "-", "s1B small")}</td>
+          <td>${inputBox(row.s2A || "-", "s2A small")}</td>
+          <td>${inputBox(row.s2B || "-", "s2B small")}</td>
+          <td>${inputBox(row.s3A || "-", "s3A small")}</td>
+          <td>${inputBox(row.s3B || "-", "s3B small")}</td>
+
+          <td>${inputBox(row.setsWonA || "-", "setsWonA small")}</td>
+          <td>${inputBox(row.setsWonB || "-", "setsWonB small")}</td>
+
+          <td>${inputBox(row.scoreA || "-", "scoreA small")}</td>
+          <td>${inputBox(row.scoreB || "-", "scoreB small")}</td>
+
+          <td>${optionList(row.matchWinner || "TBD", teams, "matchWinner")}</td>
+
+          <td>${inputBox(row.penaltyA || "-", "penaltyA small")}</td>
+          <td>${inputBox(row.penaltyB || "-", "penaltyB small")}</td>
+          <td>${optionList(row.penaltyWinner || "-", teams, "penaltyWinner")}</td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    function collectScores() {
+      return [...tbody.querySelectorAll("tr")].map(tr => {
+        const getValue = className => tr.querySelector("." + className)?.value || "";
+
+        return {
+          sport: getValue("sport"),
+          category: getValue("category"),
+          match: getValue("match"),
+          stage: getValue("stage"),
+
+          teamA: getValue("teamA"),
+          playersA: getValue("playersA"),
+
+          teamB: getValue("teamB"),
+          playersB: getValue("playersB"),
+
+          s1A: getValue("s1A"),
+          s1B: getValue("s1B"),
+          s2A: getValue("s2A"),
+          s2B: getValue("s2B"),
+          s3A: getValue("s3A"),
+          s3B: getValue("s3B"),
+
+          setsWonA: getValue("setsWonA"),
+          setsWonB: getValue("setsWonB"),
+
+          scoreA: getValue("scoreA"),
+          scoreB: getValue("scoreB"),
+
+          matchWinner: getValue("matchWinner"),
+
+          penaltyA: getValue("penaltyA"),
+          penaltyB: getValue("penaltyB"),
+          penaltyWinner: getValue("penaltyWinner")
+        };
+      });
+    }
+
+    function getWalkathonInput() {
+      return {
+        Proton: Number(document.getElementById("wProton").value || 0),
+        Neutron: Number(document.getElementById("wNeutron").value || 0),
+        Electron: Number(document.getElementById("wElectron").value || 0)
+      };
+    }
+
+    function setWalkathonInput(walkathon) {
+      document.getElementById("wProton").value = walkathon?.Proton ?? 0;
+      document.getElementById("wNeutron").value = walkathon?.Neutron ?? 0;
+      document.getElementById("wElectron").value = walkathon?.Electron ?? 0;
+    }
+
+    async function loadFromFirebase() {
+      try {
+        setStatus("Loading...");
+
+        const scoresSnapshot = await get(ref(db, "scores"));
+        const walkathonSnapshot = await get(ref(db, "walkathon"));
+
+        if (scoresSnapshot.exists()) {
+          renderScores(Object.values(scoresSnapshot.val()));
+        } else {
+          const defaults = await loadDefaultData();
+          renderScores(defaults.scores);
+        }
+
+        if (walkathonSnapshot.exists()) {
+          setWalkathonInput(walkathonSnapshot.val());
+        } else {
+          const defaults = await loadDefaultData();
+          setWalkathonInput(defaults.walkathon);
+        }
+
+        setStatus("Loaded");
+      } catch (error) {
+        console.error(error);
+        setStatus("Load error: " + error.message);
+        alert("Load error: " + error.message);
+      }
+    }
+
+    async function saveToFirebase() {
+      try {
+        setStatus("Saving...");
+
+        await set(ref(db, "scores"), collectScores());
+        await set(ref(db, "walkathon"), getWalkathonInput());
+
+        setStatus("Saved " + new Date().toLocaleTimeString());
+      } catch (error) {
+        console.error(error);
+        setStatus("Save error: " + error.message);
+        alert("Save error: " + error.message);
+      }
+    }
+
+    async function resetDemoData() {
+      const confirmed = confirm(
+        "Reset Demo Data will overwrite Firebase scores and walkathon with initial-data.json. Continue?"
+      );
+
+      if (!confirmed) return;
+
+      try {
+        setStatus("Resetting...");
+
+        const defaults = await loadDefaultData();
+
+        await set(ref(db, "scores"), defaults.scores);
+        await set(ref(db, "walkathon"), defaults.walkathon || defaultWalkathon);
+
+        renderScores(defaults.scores);
+        setWalkathonInput(defaults.walkathon || defaultWalkathon);
+
+        setStatus("Demo data restored");
+      } catch (error) {
+        console.error(error);
+        setStatus("Reset error: " + error.message);
+        alert("Reset error: " + error.message);
+      }
+    }
+
+    document.getElementById("save").addEventListener("click", saveToFirebase);
+    document.getElementById("load").addEventListener("click", loadFromFirebase);
+    document.getElementById("reset").addEventListener("click", resetDemoData);
+
+    loadFromFirebase();
+  </script>
+</body>
+</html>
