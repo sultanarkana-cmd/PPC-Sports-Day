@@ -22,3 +22,10 @@ In Firebase Realtime Database rules for testing:
 }
 
 Use admin.html > Reset Demo Data once, then Save to Firebase after edits.
+
+
+## Fixed admin buttons
+This version fixes the admin button event handlers.
+After uploading, hard-refresh:
+- Windows: Ctrl + F5
+- Mac: Cmd + Shift + R

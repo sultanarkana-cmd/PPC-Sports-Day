@@ -20,7 +20,10 @@ function collect(){return [...tb.querySelectorAll("tr")].map(tr=>{let q=c=>tr.qu
 function walk(){return {Proton:Number(wProton.value||0),Neutron:Number(wNeutron.value||0),Electron:Number(wElectron.value||0)}}
 function setWalk(w){wProton.value=w?.Proton??0; wNeutron.value=w?.Neutron??0; wElectron.value=w?.Electron??0}
 async function load(){let s=await get(ref(db,"scores")), w=await get(ref(db,"walkathon")); render(s.exists()?Object.values(s.val()):DEFAULT_SCORES); setWalk(w.exists()?w.val():DEFAULT_WALK); st.textContent="Loaded";}
-async function save(){await set(ref(db,"scores"),collect()); await set(ref(db,"walkathon"),walk()); st.textContent="Saved "+new Date().toLocaleTimeString();}
-async function reset(){if(!confirm("Reset demo data?"))return; await set(ref(db,"scores"),DEFAULT_SCORES); await set(ref(db,"walkathon"),DEFAULT_WALK); await load();}
-save.onclick=save; load.onclick=load; reset.onclick=reset; load().catch(e=>{console.error(e);st.textContent="Error: "+e.message;render(DEFAULT_SCORES);setWalk(DEFAULT_WALK);});
+async function save(){try{st.textContent="Saving..."; await set(ref(db,"scores"),collect()); await set(ref(db,"walkathon"),walk()); st.textContent="Saved "+new Date().toLocaleTimeString();}catch(e){console.error(e); st.textContent="Save error: "+e.message; alert("Save error: "+e.message);}}
+async function reset(){try{if(!confirm("Reset demo data?"))return; st.textContent="Resetting..."; await set(ref(db,"scores"),DEFAULT_SCORES); await set(ref(db,"walkathon"),DEFAULT_WALK); await load(); st.textContent="Demo data restored";}catch(e){console.error(e); st.textContent="Reset error: "+e.message; alert("Reset error: "+e.message);}}
+document.getElementById("save").addEventListener("click", save);
+document.getElementById("load").addEventListener("click", load);
+document.getElementById("reset").addEventListener("click", reset);
+load().catch(e=>{console.error(e);st.textContent="Error: "+e.message;render(DEFAULT_SCORES);setWalk(DEFAULT_WALK);});
 </script></body></html>
